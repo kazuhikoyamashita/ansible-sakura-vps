@@ -1,0 +1,52 @@
+- name: setting LAMP to SakuraServer VPS
+  hosts: sakura
+  user: admin
+  sudo: yes
+  vars:
+    httpd_port: 80
+    mysql_port: 3306
+
+  tasks:
+    - name: disallow root SSH access
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^#PermitRootLogin " line="PermitRootLogin no" state=present
+      notify: restart sshd
+    - name: disallow password authentication
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^#PasswordAuthentication " line="PasswordAuthentication no" state=present
+      notify: restart sshd
+
+    - name: update yum
+      command: yum -y update
+
+    # repository
+    - name: add repository 'rpmforge-repo'
+      yum: name=http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm state=present
+    - name: add repository 'remi-repo'
+      yum: name=http://rpms.famillecollet.com/enterprise/remi-release-6.rpm state=present
+
+    # Apache
+    - name: install apache
+      yum: name=httpd enablerepo=remi,epel,rpmforge state=present
+    - name: start httpd
+      service: name=httpd state=started enabled=yes
+    - name: add iptables rule for httpd
+      lineinfile: dest=/etc/sysconfig/iptables regexp="{{ httpd_port }}" line="-A RH-Firewall-1-INPUT -m state --state NEW -m tcp -p tcp --dport {{ httpd_port }} -j ACCEPT" insertbefore="^# add end" state=present
+      notify: restart iptables
+    # PHP
+    - name: install php
+      yum: name={{ item }} enablerepo=remi,epel,rpmforge state=present
+      with_items:
+        - php
+    # MySQL
+    - name: install mysql
+      yum: name=mysql-server enablerepo=remi,epel,rpmforge state=present
+    - name: add iptables rule for mysql
+      lineinfile: dest=/etc/sysconfig/iptables regexp="{{ mysql_port }}" line="-A RH-Firewall-1-INPUT -m state --state NEW -m tcp -p tcp --dport {{ mysql_port }} -j ACCEPT" insertbefore="^# add end" state=present
+      notify: restart iptables
+
+  handlers:
+    - name: restart sshd
+      service: name=sshd state=restarted
+
+    - name: restart iptables
+      service: name=iptables state=restarted
+

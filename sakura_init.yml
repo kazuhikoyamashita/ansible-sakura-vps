@@ -1,0 +1,34 @@
+- hosts: sakura_init
+  user: root 
+  vars: 
+    admin_name: admin
+    admin_password: admin
+    admin_public_key_path: ~/.ssh/id_rsa_sakura.pub
+    ssh_port: 10022
+  tasks:
+    - name: change SSH port
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^#Port" line="Port {{ ssh_port }}" state=present
+
+    - name: create iptables
+      template: src=iptables.j2 dest=/etc/sysconfig/iptables
+
+    - name: disallow root SSH access
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^#PermitRootLogin " line="PermitRootLogin no" state=present
+
+    - name: disallow password authentication
+      lineinfile: dest=/etc/ssh/sshd_config regexp="^#PasswordAuthentication " line="PasswordAuthentication no" state=present
+
+    - name: Add a new user
+      user: name={{admin_name}} password={{ admin_password }} groups=wheel state=present
+
+    - name: allow wheel users to sudo
+      lineinfile: dest=/etc/sudoers regexp="^#\s*(%wheel\s+ALL=\(ALL\)\s+NOPASSWD{{':'}}\s+ALL)" line="\1" backrefs=yes state=present
+
+    - name: resister a public key
+      authorized_key: user={{ admin_name }} key="{{ item }}"
+      with_file:
+        - "{{ admin_public_key_path }}"
+
+    - name: restart sshd and restart iptables
+      shell: service sshd restart && /etc/init.d/iptables restart
+
