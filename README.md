@@ -39,7 +39,7 @@ ansible 1.9.2
 $ ansible-playbook -i hosts sakura_init.yml -k -c paramiko
 ```
 
-Notice: If you run ansible command, you need to speficy 'paramiko' option.
+Notice: If you run ansible command, you need to specify 'paramiko' option.
 
 ### install LAMP environment.
 
