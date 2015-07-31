@@ -22,7 +22,7 @@ Host sakura
   IdentityFile ~/.ssh/id_rsa_sakura
 ```
 
-### install ansible usign pip command.
+### install ansible using pip command.
 
 ```
 $ sudo easy_install pip
